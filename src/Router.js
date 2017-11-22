@@ -7,7 +7,7 @@ import Control from './screens/Control';
 
 export const HomeStack = StackNavigator(
   {
-    // Home: { screen: Home },
+    Home: { screen: Home },
     Control: { screen: Control },
   },
   {

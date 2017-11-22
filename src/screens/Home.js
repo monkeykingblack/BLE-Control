@@ -22,39 +22,11 @@ export default class Home extends Component<{}> {
     super(props)
     this.manager = this.props.screenProps.ble;
     this.state = {
-      info: "",
-      values: {},
       devices: new Array(),
       connectButton: 'Connect',
       pressed: false
     }
-    this.prefixUUID = "f000aa"
-    this.suffixUUID = "-0451-4000-b000-000000000000"
     this.scanAndConnect = this.scanAndConnect.bind(this)
-  }
-
-  serviceUUID(num) {
-    return this.prefixUUID + num + "0" + this.suffixUUID
-  }
-
-  notifyUUID(num) {
-    return this.prefixUUID + num + "1" + this.suffixUUID
-  }
-
-  writeUUID(num) {
-    return this.prefixUUID + num + "2" + this.suffixUUID
-  }
-
-  info(message) {
-    this.setState({ info: message })
-  }
-
-  error(message) {
-    this.setState({ info: "ERROR: " + message })
-  }
-
-  updateValue(key, value) {
-    this.setState({ values: { ...this.state.values, [key]: value } })
   }
 
   componentWillMount() {
@@ -69,8 +41,6 @@ export default class Home extends Component<{}> {
 
   scanAndConnect() {
     this.manager.startDeviceScan(null, null, (error, device) => {
-      this.info("Scanning...")
-
       if (error) {
         Alert.alert('Bluetooth has been disabled.', 'Use have to turn on Bluetooth.',
           [
@@ -86,32 +56,12 @@ export default class Home extends Component<{}> {
         name: [device.name != null ? device.name : "n/a"],
         id: device.id,
         uuid: device.serviceUUIDs,
-        rssi: device.rssi
+        rssi: device.rssi 
       })
 
       console.log(device)
       this.setState({ devices })
     });
-  }
-
-  async setupNotifications(device) {
-    for (const id in this.sensors) {
-      const service = this.serviceUUID(id)
-      const characteristicW = this.writeUUID(id)
-      const characteristicN = this.notifyUUID(id)
-
-      const characteristic = await device.writeCharacteristicWithResponseForService(
-        service, characteristicW, "AQ==" /* 0x01 in hex */
-      )
-
-      device.monitorCharacteristicForService(service, characteristicN, (error, characteristic) => {
-        if (error) {
-          this.error(error.message)
-          return
-        }
-        this.updateValue(characteristic.uuid, characteristic.value)
-      })
-    }
   }
 
   async connectToDevice(deviceID) {
@@ -123,10 +73,10 @@ export default class Home extends Component<{}> {
         { text: 'OK', onPress: () => console.log('OK Pressed') },
       ],
       { cancelable: false })
-    } else {
+    } else  {
       await this.manager.connectToDevice(deviceID)
-      this.setState({ connectButton: 'Connected', pressed: true })
-      this.props.navigation.navigate('Control', { id: deviceID })
+      this.setState({ pressed: true })
+      this.props.navigation.navigate('Control', {deviceID: deviceID })
     }
   }
 
