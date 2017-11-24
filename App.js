@@ -7,7 +7,7 @@
 import React, { Component } from 'react';
 import { View, AppState } from 'react-native';
 import { BleManager } from 'react-native-ble-plx';
-import { HomeStack } from './src/Router';
+import { StackNav } from './src/Router';
 
 export default class App extends Component {
 
@@ -45,7 +45,7 @@ export default class App extends Component {
 
   render() {
     return (
-      <HomeStack screenProps={{ ble: this.state.ble }} />
+      <StackNav screenProps={{ ble: this.state.ble }} />
     )
   }
 }

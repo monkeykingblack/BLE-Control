@@ -12,9 +12,13 @@ import {
   View,
   Alert,
   FlatList,
-  SectionList,
-  TouchableHighlight
+  TouchableHighlight,
+  TouchableOpacity,
+  Image,
+  Button
 } from 'react-native';
+import search from '../images/search2.png';
+import loading from '../images/loading.gif'
 
 export default class Home extends Component<{}> {
 
@@ -24,69 +28,67 @@ export default class Home extends Component<{}> {
     this.state = {
       devices: new Array(),
       connectButton: 'Connect',
-      pressed: false
+      pressed: false,
+      scanning: true,
     }
-    this.scanAndConnect = this.scanAndConnect.bind(this)
+    this.scan = this.scan.bind(this)
   }
 
   componentWillMount() {
     if (Platform.OS === 'ios') {
       this.manager.onStateChange((state) => {
-        if (state === 'PoweredOn') this.scanAndConnect()
+        if (state === 'PoweredOn') this.scan()
       })
     } else {
-      this.scanAndConnect()
+      this.scan()
     }
   }
 
-  scanAndConnect() {
-    this.manager.startDeviceScan(null, null, (error, device) => {
-      if (error) {
-        Alert.alert('Bluetooth has been disabled.', 'Use have to turn on Bluetooth.',
-          [
-            { text: 'Cancel', onPress: () => console.log('Cancel Pressed'), style: 'cancel' },
-            { text: 'OK', onPress: () => console.log('OK Pressed') },
-          ],
-          { cancelable: false })
-        return
-      }
-
-      var { devices } = this.state;
-      devices.push({
-        name: [device.name != null ? device.name : "n/a"],
-        id: device.id,
-        uuid: device.serviceUUIDs,
-        rssi: device.rssi 
-      })
-
-      console.log(device)
+  scan() {
+    if (this.state.scanning) {
+      var { devices } = this.state
+      devices = new Array()
       this.setState({ devices })
-    });
+      this.manager.startDeviceScan(null, null, (error, device) => {
+        if (error) {
+          Alert.alert('Bluetooth has been disabled.', 'Use have to turn on Bluetooth.',
+            [
+              { text: 'Cancel', onPress: () => console.log('Cancel Pressed'), style: 'cancel' },
+              { text: 'OK', onPress: () => console.log('OK Pressed') },
+            ],
+            { cancelable: false })
+          return
+        }
+        if (device.name != null) {
+          devices.push({
+            name: [device.name != null ? device.name : "n/a"],
+            id: device.id,
+            uuid: device.serviceUUIDs,
+            rssi: device.rssi
+          })
+        }
+        console.log(device)
+        this.setState({ devices })
+      });
+    } else this.manager.stopDeviceScan();
+    this.setState({ scanning: !this.state.scanning })
   }
 
   async connectToDevice(deviceID) {
     this.manager.stopDeviceScan()
-    if( await this.manager.isDeviceConnected(deviceID) == true){
-      Alert.alert('Device has been connected.',
-      [
-        { text: 'Cancel', onPress: () => console.log('Cancel Pressed'), style: 'cancel' },
-        { text: 'OK', onPress: () => console.log('OK Pressed') },
-      ],
-      { cancelable: false })
-    } else  {
-      await this.manager.connectToDevice(deviceID)
-      this.setState({ pressed: true })
-      this.props.navigation.navigate('Control', {deviceID: deviceID })
-    }
+    this.setState({ scanning: true, pressed: true })
+    await this.manager.connectToDevice(deviceID)
+    this.props.navigation.navigate('Control', { deviceID: deviceID })
   }
 
   keyExtractor = (item) => [item.name, item.id, item.rssi]
 
   _renderItem(item) {
     return (
+
       <View style={styles.listContainer}>
         <View style={styles.rssi}>
-          <Text>{item.rssi}</Text>
+          <Text style={{ color: '#ffffff' }}>{item.rssi}</Text>
         </View>
         <View style={{ flexDirection: 'column' }}>
           <Text>{item.name}</Text>
@@ -94,13 +96,14 @@ export default class Home extends Component<{}> {
         </View>
         <TouchableHighlight
           underlayColor='ivory'
-          style={[styles.button, this.state.pressed && styles.buttonHandle]}
+          style={[styles.button]}
           onPress={this.connectToDevice.bind(this, item.id)}
           disabled={this.state.pressed}
         >
-          <Text>{this.state.connectButton}</Text>
+          <Text style={{ color: '#ffffff' }}>{this.manager.isDeviceConnected(item.id) ? 'Connect' : 'Connected'}</Text>
         </TouchableHighlight>
       </View>
+      // </View>
     )
   }
 
@@ -109,13 +112,32 @@ export default class Home extends Component<{}> {
     console.log(this.state.devices)
     return (
       // console.log(this.state.device)
-      <View style={{ flex: 1 }}>
-        <FlatList
-          data={this.state.devices}
-          extraData={this.state}
-          keyExtractor={this.keyExtractor}
-          renderItem={({ item }) => this._renderItem(item)}
-        />
+      <View>
+        <View style={styles.headerContainer}>
+          <View style={{ marginLeft: 10, width: 80, height: 60 }}>
+            <Image source={require('../images/logo.png')} style={{ flex: 1, width: null, height: null, resizeMode: 'contain' }} />
+          </View>
+          <View>
+            <Text style={{ fontSize: 20, color: '#ffffff', marginRight: 10 }}> BLE Control</Text>
+          </View>
+          <View>
+            <TouchableOpacity onPress={() => this.scan()}>
+              <View style={{ width: 50, height: 50, marginRight: 10 }}>
+                <Image source={this.state.scanning ? search : loading}
+                  style={{ flex: 1, width: null, height: null, resizeMode: 'contain', marginRight: 10 }}
+                />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View>
+          <FlatList
+            data={this.state.devices}
+            extraData={this.state}
+            keyExtractor={this.keyExtractor}
+            renderItem={({ item }) => this._renderItem(item)}
+          />
+        </View>
       </View>
     );
   }
@@ -126,7 +148,6 @@ export default class Home extends Component<{}> {
   }
 }
 
-
 const styles = StyleSheet.create({
   listContainer: {
     flex: 1,
@@ -136,9 +157,16 @@ const styles = StyleSheet.create({
     padding: 5,
     borderBottomWidth: 1,
   },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#00729b',
+    borderWidth: 0.5,
+  },
   rssi: {
     borderRadius: 60,
-    backgroundColor: 'yellow',
+    backgroundColor: '#00729b',
     justifyContent: 'center',
     alignItems: 'center',
     width: 60,
@@ -146,15 +174,10 @@ const styles = StyleSheet.create({
   },
   button: {
     borderRadius: 5,
-    backgroundColor: 'green',
+    backgroundColor: '#00729b',
     justifyContent: 'center',
     alignItems: 'center',
     width: 90,
     height: 47,
-    borderWidth: 1,
-    borderColor: '#FFFF00'
   },
-  buttonHandle: {
-    backgroundColor: 'orange'
-  }
 });

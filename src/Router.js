@@ -5,14 +5,14 @@ import { StackNavigator } from 'react-navigation';
 import Home from './screens/Home';
 import Control from './screens/Control';
 
-export const HomeStack = StackNavigator(
+export const StackNav = StackNavigator(
   {
     Home: { screen: Home },
     Control: { screen: Control },
   },
   {
     headerMode: 'none',
-    mode: 'modal',
+    mode: 'card',
     navigationOptions: {
       gesturesEnabled: false,
     },
@@ -25,21 +25,20 @@ export const HomeStack = StackNavigator(
       screenInterpolator: sceneProps => {
         const { layout, position, scene } = sceneProps;
         const { index } = scene;
- 
+
         const height = layout.initHeight;
         const translateY = position.interpolate({
           inputRange: [index - 1, index, index + 1],
           outputRange: [height, 0, 0],
         });
- 
+
         const opacity = position.interpolate({
           inputRange: [index - 1, index - 0.99, index],
           outputRange: [0, 1, 1],
         });
- 
+
         return { opacity, transform: [{ translateY }] };
       },
     }),
   }
- );
- 
+);
